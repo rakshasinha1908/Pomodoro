@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+body {
+  font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ---------- BOKEH BACKGROUND ---------- */
+
+@keyframes floatSlow {
+  0%   { transform: translateY(0) translateX(0); }
+  50%  { transform: translateY(-60px) translateX(40px); }
+  100% { transform: translateY(0) translateX(0); }
+}
+
+.bokeh-layer {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.bokeh {
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.25;
+  animation: floatSlow 18s ease-in-out infinite;
+}
+
+/* Individual blobs */
+.b1 { background: #ff9b42; top: 10%; left: 15%; animation-delay: 0s; }
+.b2 { background: #6bbcff; top: 50%; left: 10%; animation-delay: 4s; }
+.b3 { background: #79ff9a; top: 20%; right: 10%; animation-delay: 8s; }
+.b4 { background: #ff6b6b; bottom: 10%; right: 20%; animation-delay: 12s; }
+.b5 { background: #ffd36b; bottom: 25%; left: 30%; animation-delay: 16s; }
