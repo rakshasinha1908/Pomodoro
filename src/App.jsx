@@ -1,3 +1,165 @@
+// import { useEffect, useState, useRef } from "react";
+
+// const tickSound = new Audio("/tick.mp3");
+// const doneSound = new Audio("/done.mp3");
+
+// export default function App() {
+//   const MODES = {
+//     focus: { label: "Focus", default: 25 },
+//     short: { label: "Short Break", default: 5 },
+//     long: { label: "Long Break", default: 15 },
+//   };
+
+//   const completedRef = useRef(false);
+
+//   const [mode, setMode] = useState("focus");
+//   const [durations, setDurations] = useState({
+//     focus: 25,
+//     short: 5,
+//     long: 15,
+//   });
+
+//   const [timeLeft, setTimeLeft] = useState(25 * 60);
+//   const [isRunning, setIsRunning] = useState(false);
+
+//   const [sessions, setSessions] = useState({
+//     focus: 0,
+//     short: 0,
+//     long: 0,
+//   });
+
+//   const lastTickRef = useRef(null);
+
+// /* REAL TIME TIMER ENGINE */
+// useEffect(() => {
+//   if (!isRunning) return;
+
+//   lastTickRef.current = Date.now();
+//   completedRef.current = false;
+
+//   const interval = setInterval(() => {
+//     const now = Date.now();
+//     const diff = Math.floor((now - lastTickRef.current) / 1000);
+
+//     if (diff >= 1) {
+//       lastTickRef.current = now;
+
+//       setTimeLeft((prev) => {
+//         if (prev <= diff) {
+//           if (!completedRef.current) {
+//             completedRef.current = true;
+//             handleComplete();
+//           }
+//           return 0;
+//         }
+//         return prev - diff;
+//       });
+//     }
+//   }, 1000);
+
+//   return () => clearInterval(interval);
+// }, [isRunning, mode]);
+
+
+//   /* LOCAL STORAGE */
+//   useEffect(() => {
+//     const saved = JSON.parse(localStorage.getItem("pomodoro"));
+//     if (saved) {
+//       setMode(saved.mode);
+//       setDurations(saved.durations);
+//       setSessions(saved.sessions);
+//       setTimeLeft(saved.timeLeft);
+//     }
+//   }, []);
+
+//   useEffect(() => {
+//     localStorage.setItem(
+//       "pomodoro",
+//       JSON.stringify({ mode, durations, sessions, timeLeft })
+//     );
+//   }, [mode, durations, sessions, timeLeft]);
+
+//   function playClick() {
+//     tickSound.currentTime = 0;
+//     tickSound.volume = 0.25;
+//     tickSound.play().catch(() => {});
+//   }
+
+
+//   /* LOGIC */
+//   function handleComplete() {
+//     playDone(8);
+//     setIsRunning(false);
+
+//     setSessions((prev) => {
+//       const updated = { ...prev, [mode]: prev[mode] + 1 };
+
+//       if (mode === "focus" && updated.focus % 4 === 0) {
+//         switchMode("long");
+//       } else if (mode === "focus") {
+//         switchMode("short");
+//       } else {
+//         switchMode("focus");
+//       }
+
+//       return updated;
+//     });
+//   }
+
+//   function switchMode(newMode) {
+//     playClick();
+//     completedRef.current = false;
+//     setMode(newMode);
+//     setIsRunning(false);
+//     setTimeLeft(durations[newMode] * 60);
+//   }
+
+//   function toggleTimer() {
+//     playClick();
+//     setIsRunning((p) => !p);
+//   }
+
+//   function resetTimer() {
+//     playClick();
+//     setIsRunning(false);
+//     setTimeLeft(durations[mode] * 60);
+//   }
+
+//   function resetSessions() {
+//     playClick();
+//     setSessions({ focus: 0, short: 0, long: 0 });
+//   }
+
+//   function changeDuration(type, delta) {
+//     playClick();
+//     setDurations((prev) => {
+//       const updated = Math.max(1, prev[type] + delta);
+
+//       if (type === mode && !isRunning) {
+//         setTimeLeft(updated * 60);
+//       }
+
+//       return { ...prev, [type]: updated };
+//     });
+//   }
+
+//   function formatTime(sec) {
+//     const m = String(Math.floor(sec / 60)).padStart(2, "0");
+//     const s = String(sec % 60).padStart(2, "0");
+//     return `${m}:${s}`;
+//   }
+
+//   function playDone(seconds = 3) {
+//     doneSound.currentTime = 0;
+//     doneSound.volume = 0.7;
+//     doneSound.play().catch(() => {});
+
+//     setTimeout(() => {
+//       doneSound.pause();
+//       doneSound.currentTime = 0;
+//     }, seconds * 1000);
+//   }
+
 import { useEffect, useState, useRef } from "react";
 
 const tickSound = new Audio("/tick.mp3");
@@ -11,6 +173,8 @@ export default function App() {
   };
 
   const completedRef = useRef(false);
+  const startTimeRef = useRef(null);
+  const endTimeRef = useRef(null);
 
   const [mode, setMode] = useState("focus");
   const [durations, setDurations] = useState({
@@ -28,29 +192,35 @@ export default function App() {
     long: 0,
   });
 
-  /* TIMER ENGINE */
+  /* ================= REAL WORLD TIMER ================= */
   useEffect(() => {
     if (!isRunning) return;
 
-    completedRef.current = false;
+    if (!startTimeRef.current) {
+      const now = Date.now();
+      startTimeRef.current = now;
+      endTimeRef.current = now + timeLeft * 1000;
+    }
 
     const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          if (!completedRef.current) {
-            completedRef.current = true;
-            handleComplete();
-          }
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+      const now = Date.now();
+      const remaining = Math.max(
+        0,
+        Math.ceil((endTimeRef.current - now) / 1000)
+      );
+
+      setTimeLeft(remaining);
+
+      if (remaining <= 0 && !completedRef.current) {
+        completedRef.current = true;
+        handleComplete();
+      }
+    }, 500);
 
     return () => clearInterval(interval);
-  }, [isRunning, mode]);
+  }, [isRunning]);
 
-  /* LOCAL STORAGE */
+  /* ================= LOCAL STORAGE ================= */
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem("pomodoro"));
     if (saved) {
@@ -74,11 +244,22 @@ export default function App() {
     tickSound.play().catch(() => {});
   }
 
+  function playDone(seconds = 3) {
+    doneSound.currentTime = 0;
+    doneSound.volume = 0.7;
+    doneSound.play().catch(() => {});
+    setTimeout(() => {
+      doneSound.pause();
+      doneSound.currentTime = 0;
+    }, seconds * 1000);
+  }
 
-  /* LOGIC */
+  /* ================= LOGIC ================= */
   function handleComplete() {
     playDone(8);
     setIsRunning(false);
+    startTimeRef.current = null;
+    endTimeRef.current = null;
 
     setSessions((prev) => {
       const updated = { ...prev, [mode]: prev[mode] + 1 };
@@ -98,6 +279,8 @@ export default function App() {
   function switchMode(newMode) {
     playClick();
     completedRef.current = false;
+    startTimeRef.current = null;
+    endTimeRef.current = null;
     setMode(newMode);
     setIsRunning(false);
     setTimeLeft(durations[newMode] * 60);
@@ -105,12 +288,20 @@ export default function App() {
 
   function toggleTimer() {
     playClick();
-    setIsRunning((p) => !p);
+    setIsRunning((p) => {
+      if (!p) {
+        startTimeRef.current = null;
+        endTimeRef.current = null;
+      }
+      return !p;
+    });
   }
 
   function resetTimer() {
     playClick();
     setIsRunning(false);
+    startTimeRef.current = null;
+    endTimeRef.current = null;
     setTimeLeft(durations[mode] * 60);
   }
 
@@ -123,11 +314,9 @@ export default function App() {
     playClick();
     setDurations((prev) => {
       const updated = Math.max(1, prev[type] + delta);
-
       if (type === mode && !isRunning) {
         setTimeLeft(updated * 60);
       }
-
       return { ...prev, [type]: updated };
     });
   }
@@ -138,16 +327,6 @@ export default function App() {
     return `${m}:${s}`;
   }
 
-  function playDone(seconds = 3) {
-    doneSound.currentTime = 0;
-    doneSound.volume = 0.7;
-    doneSound.play().catch(() => {});
-
-    setTimeout(() => {
-      doneSound.pause();
-      doneSound.currentTime = 0;
-    }, seconds * 1000);
-  }
 
   return (
     <div className="relative min-h-screen w-full bg-[#1e232e] flex items-center justify-center">
